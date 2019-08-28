@@ -2,7 +2,7 @@ function [in_degree_prob_dist,in_bins,out_degree_prob_dist,out_bins] = calc_degr
 out_degree_prob_dist=0;out_bins=0;
     [Channels,~,Bands,Thresholds] = size(AdjMatrix);
 
-    [in_degree, out_degree] = calc_node_degree(AdjMatrix);
+    [~,in_degree, ~] = calc_node_degree(AdjMatrix);
     
 %    total_edges = (Channes^2 - Channels)/2;
 %    max_in_degree = max(in_degree);

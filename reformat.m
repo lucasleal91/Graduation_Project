@@ -34,26 +34,12 @@
         time_points = freq * points_in_trial;
         reshapped_data = permute(reshape(in_data, C, time_points, calc_trials), [2 1 3]);
         
-%        for i=1:F/freq
-%            out_data = reshapped_data(1:4:end, [4 6 15 17 19 21 23 25 27 29 31 33 47 49 51 57 59], i);
-%            final_name = strcat(ref_file_name, 'sample_trial', int2str(i), '.mat');
-%            save(final_name, 'out_data');
-%        end
-
-%        out_data = reshapped_data(1:4:end, [4 6 15 17 19 21 23 25 27 29 31 33 47 49 51 57 59], :);
-%        final_name = strcat(ref_file_name, 'sample_all_trials.mat');
-%        save(final_name, 'out_data');
-        
         out_data = reshapped_data;
         trials = calc_trials;
         final_name = strcat(ref_file_name, 'sample_all_trials.mat');
         save(final_name, 'out_data');
     else
     
-%    out_data = reshapped_data(1:4:end, [4 6 15 17 19 21 23 25 27 29 31 33 47 49 51 57 59], :);
-%    final_name = strcat(ref_file_name, 'sample_all_trials.mat');
-%    save(final_name, 'out_data');
-
         reshapped_data = permute(in_data, [2 1 3]);
 
         out_data = reshapped_data;

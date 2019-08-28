@@ -20,7 +20,7 @@ function [pottaic,aic] = OrderEstimationMVAR(Y,pmax)
         [~,S,~] = estimateMVAR(Y,p);
 
         %formula for multivariate AIC 
-        aic(p)=N*log(det(S))+2*M*M*p; % S covariance matrix
+        aic(p)=N*log(det(S(:,:,p)))+2*M*M*p; % S covariance matrix
     end
     
     pottaic=find(aic == min(aic));

@@ -14,11 +14,12 @@
 %%% outputs:
 % PDC= Partial Directed Coherence (Eq. 15 but with sigma_i=sigma_j for each i,j)
 
-function [PDC, Af, Af_] = getPDC(A, p, N, Fs, m)
+function [PDC, Af, Af_] = getPDC(A, Ar, p, N, Fs, m)
 
     % Is there a way to do this more matlab-ish? (Removing for)
     %Af = zeros(m);
     Af = [eye(m) -A];
+%    Ar = [eye(m) -Ar];
     As = zeros(m,m);
     
     if all(size(N)==1),	 %if N is scalar
@@ -38,9 +39,11 @@ function [PDC, Af, Af_] = getPDC(A, p, N, Fs, m)
             %for b=1:m
                 % This third for loop calculates summation
                 % SUM(A(r)*e^(-i*2*pi*f*r)) for r=1:p
-                for r=1:p+1
+%                for r=1:p+1
+                for r=1:p
                     % Af(a,b) = Af(a,b) + (A(:,r)*exp(-1i*2*pi*f/Fs*(r-1)));
-                    As = As + Af(:,r*m+(1-m:0))*exp(-z*f(n)*(r-1));
+                    %As = As + Af(:,r*m+(1-m:0))*exp(-z*f(n)*(r-1)); % -- correct one
+                    As = As + squeeze(Ar(:,:,r)).*exp(-z*f(n)*(r-1));
                 end
 
                 %   if a == b

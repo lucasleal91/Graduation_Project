@@ -11,7 +11,7 @@
 % Yp, estimated time series
 % Up, estimated residuals
 
-function [Am, S, Yp, Up] = estimateMVAR(Y, p)
+function [Am, Ar, S, Yp, Up] = estimateMVAR(Y, p)
 
     [M,N]=size(Y);
 
@@ -32,5 +32,11 @@ function [Am, S, Yp, Up] = estimateMVAR(Y, p)
     Yp = Am*Z;
     Yp = [NaN*ones(M,p) Yp]; % Vector of predicted data
 
-    Up = Y-Yp; Up = Up(:,p+1:N); % residuals of strictly causal model
+    Up = Y-Yp; 
+    Up = Up(:,p+1:N); % residuals of strictly causal model
     S = cov(Up');
+    
+    Ar = zeros(M,M,p);
+    for i=1:p
+        Ar(:,:,i) = Am(:,1+((i-1)*M):M*i);
+    end
