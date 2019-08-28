@@ -1,16 +1,22 @@
-Bachelor Final Project:
-Automated PDC and Graph Analysis of EEG signals.
+# Automated PDC and Graph Analysis of EEG signals
+## Bachelor Final Project
 
-Author: Lucas Leal
-Professor: Adenauer Casali
-
-Federal University of Sao Paulo
-Institute of Science and Technology
+### **Federal University of Sao Paulo**
+#### **Institute of Science and Technology**
 
 
-References:
+**Author:** Lucas Leal
 
-[1] <paper Huang>
-[2] mvgc Tool Box
-[3] <trabalho Prof. Adenauer>
-[4] <papers e livro Sporns>
+**Professor:** Adenauer Casali
+
+
+**References:**
+
+[1] (paper Huang)
+  
+[2] MVGC Tool Box
+
+[3] (trabalho Prof. Adenauer)
+  
+[4]... (papers e livro Sporns)
+  
