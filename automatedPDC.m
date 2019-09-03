@@ -1,169 +1,56 @@
 %% Automated PDC Calculation
-% This script calculates PDC given an EEG file and its frequency
+% This script calculates PDC averaged in frequency bands given EEG_data
 
 %%% inputs:
-% file_name: EEG data
-% freq: frequency used to sample EEG
+% EEG_data : channels x samples x trials
+% fa: sampling frequency 
+% freq: frequency vector
+% maxOrderCalc:  maximum VAR model order 
+% order: VAR model order
+
+%%% usage: 
+%1) Calculating Akaike and Bayesian information criteria and use min order bewteen AIC an BIC 
+%[Results] = automatedPDC(EEG_data, fa,freq,maxOrderCalc)
+%
+%2) Skipping Akaike and Bayesian information criteria and applying a fixed
+%order:
+%[Results] = automatedPDC(EEG_data, fa,freq,maxOrderCalc,order)
+
 
 %%% outputs:
-% PDC_real: adjacency matrix for calculated PDC
-% AdjacencyMatrix: adjacency matrix calculated using PDC connectivity
-% Inumerous metrics
+% Results.PDC: avg |PDC|^2 (chan x chan x frequency band)
+% Results.Oder: VAR model order
+% Results.AR: Var model coefficients (chan to x chan from x order);
+% Results.SU: residuals covariance (chan to x chan from x order);
 
-
-function [finalPDC, AdjacencyMatrix, FinalThreshold, dist, total_degree, in_degree, out_degree, in_degree_prob_dist,in_bins,out_degree_prob_dist,out_bins, local_efficiency, global_efficiency, triangles, Clustering_coeff, Net_Clustering_Coeff, Assortativity_coeff, average_neighbor_degree] = automatedPDC(file_name, freq)
+function [Results] = automatedPDC(EEG_data, fa, freq,maxOrderCalc,order)
     
-    % First step: reformat data
-    [out_data, ~, trials] = reformat(file_name, freq);
     
-    delta_band = 0.5:0.1:3;
-    alpha_band = 8:1:12;
-    beta1_band = 12:1:20;
-    beta2_band = 21:1:30;
-    gamma_band = 30:1:45;
-    Bands = 5;
-    EEG_Channels = 60;
-    trial_size = 10;
-    maxOrderCalc = 20;
-    
-    finalTrialPDC=zeros(EEG_Channels,EEG_Channels,trials,Bands);
-%    finalPDC=zeros(60,60);
-    
-%    orderData=permute(reshape(out_data, [EEG_Channels, freq*trials*trial_size]), [2 1]); 
-    
-    % Second step: estimate order parameter by applying AIC - eMVAR
-    orderData = permute(out_data, [2 1 3]);
-%    maxOrderCalc = 20;
-%    [potaic, aic] = OrderEstimationMVAR(orderData, maxOrderCalc);
-%    modelOrder = potaic(1);
-    
-%     From MVGC Toolbox -- use same approach to optimize OrderEstimationMVAR.m
-    [aic_mvgc,~,moaic_mvgc,~] = tsdata_to_infocrit(orderData, maxOrderCalc);
-    modelOrder = moaic_mvgc;
-    
-    %% calculating PDC for each data trial
-    for n=1:trials
-        inData = permute(out_data(:,:,n), [2 1]);
-        
-%         Removed Order Estimation from inside trials loop
-%        [potaic, aic] = OrderEstimationMVAR(inData, maxOrderCalc);
-%        modelOrder = potaic(1);
-
-        % Trhid step: estimate MVAR coeficients
-        [Am, Ar, Su, ~, ~] = estimateMVAR(inData, modelOrder);
-
-        % Fourth step: calculate PDC for a given frequency band
-%        fBand = freqBand; %[40:59] -- example
-        [Chans, ~] = size(inData);
-
-        [deltaPDC, ~, ~] = getPDC(Am, Ar, modelOrder, delta_band, freq, Chans);
-        [alphaPDC, ~, ~] = getPDC(Am, Ar, modelOrder, alpha_band, freq, Chans);
-        [beta1PDC, ~, ~] = getPDC(Am, Ar, modelOrder, beta1_band, freq, Chans);
-        [beta2PDC, ~, ~] = getPDC(Am, Ar, modelOrder, beta2_band, freq, Chans);
-        [gammaPDC, ~, ~] = getPDC(Am, Ar, modelOrder, gamma_band, freq, Chans);
-        
-%       [~,~,PDC_2,~,~,~,~,~,~,~,~] = fdMVAR(Am,Su,fBand,sFreq);
-%       realPDC_2 = abs(PDC_2).^2;
-%       avgPDC_2 = mean(realPDC_2, 3);
-%       finalPDC2 = avgPDC_2;
-
-        % Taking absolute value, applying power of 2 and then taking mean of
-        % frequency band values
-        realDeltaPDC = abs(deltaPDC).^2;
-        realAlphaPDC = abs(alphaPDC).^2;
-        realBeta1PDC = abs(beta1PDC).^2;
-        realBeta2PDC = abs(beta2PDC).^2;
-        realGammaPDC = abs(gammaPDC).^2;
- 
-        avgDeltaPDC = mean(realDeltaPDC, 3);
-        avgAlphaPDC = mean(realAlphaPDC, 3);
-        avgBeta1PDC = mean(realBeta1PDC, 3);
-        avgBeta2PDC = mean(realBeta2PDC, 3);
-        avgGammaPDC = mean(realGammaPDC, 3);
-        
-        finalTrialPDC(:,:,n,1) = avgDeltaPDC;
-        finalTrialPDC(:,:,n,2) = avgAlphaPDC;
-        finalTrialPDC(:,:,n,3) = avgBeta1PDC;
-        finalTrialPDC(:,:,n,4) = avgBeta2PDC;
-        finalTrialPDC(:,:,n,5) = avgGammaPDC;
-    end;
-    
-    % Fifth step: calculate mean of all trials. Threshold will first be
-    % determined based on trials averaging, then it can be expanded to
-    % different subjects (person) averaging
-    finalDeltaPDC = mean(squeeze(finalTrialPDC(:,:,:,1)), 3);
-    finalAlphaPDC = mean(squeeze(finalTrialPDC(:,:,:,1)), 3);
-    finalBeta1PDC = mean(squeeze(finalTrialPDC(:,:,:,1)), 3);
-    finalBeta2PDC = mean(squeeze(finalTrialPDC(:,:,:,1)), 3);
-    finalGammaPDC = mean(squeeze(finalTrialPDC(:,:,:,1)), 3);
-    
-    finalPDC(:,:,1) = finalDeltaPDC;
-    finalPDC(:,:,2) = finalAlphaPDC;
-    finalPDC(:,:,3) = finalBeta1PDC;
-    finalPDC(:,:,4) = finalBeta2PDC;
-    finalPDC(:,:,5) = finalGammaPDC;
-
-    % Sixth step: take mean of all values as threshold for minimum strength
-    % correlation value and create adjacency matrix -> PDC(i,j) >=
-    % calculated mean
-
-    density = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1];
-    [~,densities_size]=size(density);
-    AdjacencyMatrix=zeros(EEG_Channels,EEG_Channels,Bands,densities_size);
-    sortedPDC = zeros(Bands,3600);
-    for i=1:Bands
-
-        temp_PDC = squeeze(finalPDC(:,:,i));
-        sortedPDC(i,:) = sort(temp_PDC(:), 'descend');
-        for j=1:densities_size
-            AdjacencyMatrix(:,:,i,j) = temp_PDC >= sortedPDC(i,3600*density(j));
-        end
-    
-        FinalThreshold = sortedPDC(3600*density(1));
+    if nargin<4
+        maxOrderCalc=20;
+    end
+    Results=struct('Order',[],'Ar',[],'PDC',[],'SU',[]);
+   
+    if nargin<5
+        [~,~,moAIC,moBIC] = tsdata_to_infocrit(EEG_data, maxOrderCalc,'LWR',true);
+        fprintf('\nbest model order (AIC) = %d\n',moAIC);
+        fprintf('best model order (BIC) = %d\n',moBIC);
+        Results.Order=max([moAIC,moBIC]); %max (subestimar a ordem é pior) 
+    else
+        Results.Order=order;
     end
 
-    pos = strfind(file_name, '.mat');
-    ref_file_name =  file_name(1:pos-1);
+    [Chans] = size(EEG_data,1);
     
-    % PDC file
-    final_name_pdc = strcat(ref_file_name, '_PDC', '.mat');
-    save(final_name_pdc, 'finalPDC');
-    
-    % Adjcency Matrix file
-    final_name_adj_mat = strcat(ref_file_name, '_Adjancecy_Matrix', '.mat');
-    save(final_name_adj_mat, 'AdjacencyMatrix');
-    
-    % Threshold value
-    final_name_thresh = strcat(ref_file_name, '_Threshold', '.mat');
-    save(final_name_thresh, 'FinalThreshold');
-
-    % Prealocating some outputs to improve performance
-    in_bins = 0;    % zeros(1,EEG_Channels,Bands,densities_size);
-    out_bins = 0;   % zeros(1,EEG_Channels,Bands,densities_size);    
-    Assortativity_coeff = zeros(1,Bands,densities_size);
-    average_neighbor_degree = zeros(1,EEG_Channels,Bands,densities_size);
-    triangles = zeros(1,EEG_Channels,Bands,densities_size);
-    Clustering_coeff = zeros(1,EEG_Channels,Bands,densities_size);
-    Net_Clustering_Coeff = zeros(1,Bands,densities_size);
-    
-    % Extracting metrics from network
-    [dist] = calc_shortest_path(AdjacencyMatrix);
-    [total_degree,in_degree,out_degree] = calc_node_degree(AdjacencyMatrix);
-    [in_degree_prob_dist,~,out_degree_prob_dist,~] = calc_degree_distribution (AdjacencyMatrix);            
-    [local_efficiency,global_efficiency] = calc_efficiency(AdjacencyMatrix);
-
-    for i=1:Bands
-        for j=1:densities_size
-            [Assortativity_coeff(:,i,j), ~, ~, ~, ~] = calc_assortativity_coefficient(AdjacencyMatrix(:,:,i,j));
-            [average_neighbor_degree(:,:,i,j)] = calc_ave_neighbor_degree(AdjacencyMatrix(:,:,i,j));
-            [triangles(:,:,i,j)] = calc_triangles(AdjacencyMatrix(:,:,i,j));
-            [Clustering_coeff(:,:,i,j), Net_Clustering_Coeff(:,i,j)] = calc_clustering_coefficient(AdjacencyMatrix(:,:,i,j)); 
-        end
+    [Results.Ar,Results.SU] = tsdata_to_var(EEG_data,Results.Order);
+    assert(~isbad(Results.Ar),'VAR estimation failed');
+    rho=  var_specrad(Results.Ar);
+    if rho>1
+        warning('Specrad > 1: unstable VAR model!!');
     end
-    
+
+    Results.PDC=zeros(Chans,Chans,numel(freq));    
+    [Results.PDC] = abs(getPDC_AGC(Results.Ar, freq, fa,Results.SU)).^2;
+
 end
 
-%pResultados - teste de estabilidade:
-% ruido branco
-% ruido colorido
-% pink noise
